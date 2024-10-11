@@ -24,7 +24,6 @@ const addEdge = (src, dest) => {
     metroGraph[dest][src] = 1; // undirected graph
 };
 
-
 const edges = [
     [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8],
     [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14], [14, 15],
@@ -38,8 +37,7 @@ const edges = [
 
 edges.forEach(edge => addEdge(edge[0], edge[1]));
 
-
-const dijkstra = (src, dest) => {
+const dijkstra = (src) => {
     const n = metroGraph.length;
     const dist = Array(n).fill(Infinity);
     const prev = Array(n).fill(-1);
@@ -55,14 +53,13 @@ const dijkstra = (src, dest) => {
             if (!visited[v] && metroGraph[u][v] !== 0 &&
                 dist[u] !== Infinity && dist[u] + metroGraph[u][v] < dist[v]) {
                 dist[v] = dist[u] + metroGraph[u][v];
-                prev[v] = u; 
+                prev[v] = u;
             }
         }
     }
 
-    showResult(dist, prev, dest);
+    return { dist, prev };
 };
-
 
 const minDistance = (dist, visited) => {
     let min = Infinity;
@@ -77,17 +74,34 @@ const minDistance = (dist, visited) => {
     return minIndex;
 };
 
-
-const showResult = (dist, prev, dest) => {
+// Show the path to the selected destination
+const showResult = (dist, prev, src, dest) => {
     const resultContainer = document.getElementById("result");
-    if (dist[dest] === Infinity) {
-        resultContainer.innerHTML = "No path found!";
-        return;
-    }
+    resultContainer.innerHTML = ""; 
 
-    const path = getPath(prev, dest);
-    resultContainer.innerHTML = `Minimum Number of Stations: ${dist[dest]}<br>Path: ${path}`;
-    drawPath(path);
+    if (dist[dest] === Infinity) {
+        resultContainer.innerHTML = `<p>No path to ${stations[dest]}!</p>`;
+    } else {
+        const path = getPath(prev, dest);
+        resultContainer.innerHTML = `<p>Shortest path to <b>${stations[dest]}</b>: ${dist[dest]} stations, Path: ${path}</p>`;
+    }
+};
+
+// Show the results for all destinations
+const showAllResults = (dist, prev, src) => {
+    const resultContainer = document.getElementById("result");
+    resultContainer.innerHTML = ""; 
+
+    for (let i = 0; i < dist.length; i++) {
+        if (i === src) continue; 
+
+        if (dist[i] === Infinity) {
+            resultContainer.innerHTML += `<p>No path to ${stations[i]}!</p>`;
+        } else {
+            const path = getPath(prev, i);
+            resultContainer.innerHTML += `<p>To <b>${stations[i]}</b>: ${dist[i]} stations, Path: ${path}</p>`;
+        }
+    }
 };
 
 
@@ -96,47 +110,39 @@ const getPath = (prev, j) => {
     const path = [];
     while (j !== -1) {
         path.push(stations[j]);
-        j = prev[j]; 
+        j = prev[j];
     }
-    path.reverse(); 
-    return path.join(" -> "); 
-};
-
-
-const drawPath = (path) => {
-    const canvas = document.getElementById("pathCanvas");
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.font = "16px Arial";
-    ctx.fillStyle = "black";
-
-    const stepSize = canvas.width / (path.length + 1);
-    for (let i = 0; i < path.length; i++) {
-        ctx.fillText(path[i], (i + 1) * stepSize, canvas.height / 2);
-        if (i > 0) {
-            ctx.beginPath();
-            ctx.moveTo(i * stepSize, canvas.height / 2);
-            ctx.lineTo((i + 1) * stepSize, canvas.height / 2);
-            ctx.stroke();
-        }
-    }
+    path.reverse();
+    return path.join(" -> ");
 };
 
 
 document.getElementById("findPathButton").addEventListener("click", () => {
-    const sourceInput = document.getElementById("source").value.trim(); 
-    const destinationInput = document.getElementById("destination").value.trim(); 
+    const sourceInput = document.getElementById("source").value.trim();
+    const destinationInput = document.getElementById("destination").value.trim();
 
     const sourceIndex = stations.findIndex(station => station.toLowerCase() === sourceInput.toLowerCase());
     const destinationIndex = stations.findIndex(station => station.toLowerCase() === destinationInput.toLowerCase());
 
-    console.log(`Source Index: ${sourceIndex}, Destination Index: ${destinationIndex}`); 
-    
-    if (sourceIndex === -1 || destinationIndex === -1) {
-        alert("Please enter valid station names.");
+    if (sourceIndex === -1) {
+        alert("Please enter a valid source station name.");
         return;
     }
 
-    dijkstra(sourceIndex, destinationIndex);
+    const { dist, prev } = dijkstra(sourceIndex); 
+
+    if (destinationInput && destinationIndex !== -1) {
+        showResult(dist, prev, sourceIndex, destinationIndex); 
+    } else {
+        document.getElementById("showAllBtn").style.display = "block"; 
+    }
+});
+
+
+document.getElementById("showAllBtn").addEventListener("click", () => {
+    const sourceInput = document.getElementById("source").value.trim();
+    const sourceIndex = stations.findIndex(station => station.toLowerCase() === sourceInput.toLowerCase());
+
+    const { dist, prev } = dijkstra(sourceIndex);
+    showAllResults(dist, prev, sourceIndex); 
 });
